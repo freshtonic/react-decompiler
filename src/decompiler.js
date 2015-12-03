@@ -3,13 +3,28 @@ import {html as htmlBeautify} from 'js-beautify';
 import stringifyObject from './stringify-object';
 import merge from 'object-assign';
 
-const getProps = component =>
+const isDefaultValue = (component, prop) =>
+  component.props[prop] === component.type.defaultProps[prop];
+
+const relevantProps = (component, stripDefaultValueProps) => {
+  if (!stripDefaultValueProps) {
+    return component.props;
+  } else {
+    let props = {};
+    Object.keys(component.props).filter(key => !isDefaultValue(component, key)).forEach(key => {
+      props[key] = component.props[key];
+    });
+    return props;
+  }
+};
+
+const getProps = (component, stripDefaultValueProps=false) =>
   merge(
     merge(
       getAttribute('key', component),
       getAttribute('ref', component)
     ),
-    component.props
+    relevantProps(component, stripDefaultValueProps)
   );
 
 const getAttribute = (attribute, component) =>
@@ -17,8 +32,8 @@ const getAttribute = (attribute, component) =>
 
 const getChildren = component => getProps(component).children;
 
-const getPropsKeys = component =>
-  Object.keys(getProps(component)).filter(prop => prop !== 'children');
+const getPropsKeys = (component, excludePropsWithDefaultValue) =>
+  Object.keys(getProps(component, excludePropsWithDefaultValue)).filter(prop => prop !== 'children');
 
 const getComponentName = component =>
   component.type.displayName || component.type.name;
@@ -38,17 +53,17 @@ const getComponentProp = (component, prop) =>
 const appendStringifiedProp = component => (accumulated, prop) =>
   `${accumulated} ${prop}=${getComponentProp(component, prop)}`;
 
-const stringifyProps = component =>
-  getPropsKeys(component).reduce(appendStringifiedProp(component), '');
+const stringifyProps = (component, stripDefaultValueProps) =>
+  getPropsKeys(component, stripDefaultValueProps).reduce(appendStringifiedProp(component), '');
 
-const stringifyComposedComponent = component =>
-  `<${getComponentType(component)}${stringifyProps(component)}>${stringifyItems(getChildren(component))}</${getComponentType(component)}>`;
+const stringifyComposedComponent = (component, stripDefaultValueProps) =>
+  `<${getComponentType(component)}${stringifyProps(component, stripDefaultValueProps)}>${stringifyItems(getChildren(component), stripDefaultValueProps)}</${getComponentType(component)}>`;
 
-const stringifySimpleComponent = component =>
-  `<${getComponentType(component)}${stringifyProps(component)} />`;
+const stringifySimpleComponent = (component, stripDefaultValueProps) =>
+  `<${getComponentType(component)}${stringifyProps(component, stripDefaultValueProps)} />`;
 
-const stringifyComponent = component =>
-  getChildren(component) ? stringifyComposedComponent(component) : stringifySimpleComponent(component);
+const stringifyComponent = (component, stripDefaultValueProps) =>
+  getChildren(component) ? stringifyComposedComponent(component, stripDefaultValueProps) : stringifySimpleComponent(component, stripDefaultValueProps);
 
 const stringifyFunction = value =>
   value.toString().replace(/ {[\s\S]*/, '{ ... }')
@@ -62,12 +77,12 @@ const stringifyValue = value => {
   }
 }
 
-const stringifyItem = item =>
-  isReact(item) ? stringifyComponent(item) : stringifyValue(item);
+const stringifyItem = (item, stripDefaultValueProps) =>
+  isReact(item) ? stringifyComponent(item, stripDefaultValueProps) : stringifyValue(item);
 
-const stringifyItems = components =>
-  [].concat(components).map(stringifyItem).join('');
+const stringifyItems = (components, stripDefaultValueProps) =>
+  [].concat(components).map(item => stringifyItem(item, stripDefaultValueProps)).join('');
 
 export const decompile = stringifyItems;
 
-export const formatted = (items) => htmlBeautify(stringifyItems(items), { indent_size: 2 });
+export const formatted = (items, stripDefaultValueProps=false) => htmlBeautify(stringifyItems(items, stripDefaultValueProps), { indent_size: 2 });

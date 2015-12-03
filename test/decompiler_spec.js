@@ -18,6 +18,20 @@ describe('decompiler', () => {
     }
   };
 
+  class Bar extends React.Component {
+    render () {
+      return (<span>Bar</span>);
+    }
+  };
+
+  Bar.propTypes = {
+    baz: React.PropTypes.number
+  };
+
+  Bar.defaultProps = {
+    baz: 456
+  };
+
   it('stringify a simple component', () => {
     let component = <div />;
 
@@ -28,6 +42,12 @@ describe('decompiler', () => {
     let component = <div foo="bar" className="baz" />;
 
     expect(decompile(component)).toBe('<div foo="bar" className="baz" />');
+  });
+
+  it('stringify should strip out props that have default values', () => {
+    expect(decompile(<Bar/>, true)).toBe('<Bar />');
+    expect(decompile(<Bar baz={456}/>, true)).toBe('<Bar />');
+    expect(decompile(<Bar baz={123}/>, true)).toBe('<Bar baz={123} />');
   });
 
   it('stringify a simple component with interpolated props', () => {

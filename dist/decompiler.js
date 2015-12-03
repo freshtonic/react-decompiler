@@ -20,8 +20,33 @@ var _objectAssign = require('object-assign');
 
 var _objectAssign2 = _interopRequireDefault(_objectAssign);
 
+var isDefaultValue = function isDefaultValue(component, prop) {
+  return component.props[prop] === component.type.defaultProps[prop];
+};
+
+var relevantProps = function relevantProps(component, stripDefaultValueProps) {
+  if (!stripDefaultValueProps) {
+    return component.props;
+  } else {
+    var _ret = (function () {
+      var props = {};
+      Object.keys(component.props).filter(function (key) {
+        return !isDefaultValue(component, key);
+      }).forEach(function (key) {
+        props[key] = component.props[key];
+      });
+      return {
+        v: props
+      };
+    })();
+
+    if (typeof _ret === 'object') return _ret.v;
+  }
+};
+
 var getProps = function getProps(component) {
-  return (0, _objectAssign2['default'])((0, _objectAssign2['default'])(getAttribute('key', component), getAttribute('ref', component)), component.props);
+  var stripDefaultValueProps = arguments.length <= 1 || arguments[1] === undefined ? false : arguments[1];
+  return (0, _objectAssign2['default'])((0, _objectAssign2['default'])(getAttribute('key', component), getAttribute('ref', component)), relevantProps(component, stripDefaultValueProps));
 };
 
 var getAttribute = function getAttribute(attribute, component) {
@@ -32,8 +57,8 @@ var getChildren = function getChildren(component) {
   return getProps(component).children;
 };
 
-var getPropsKeys = function getPropsKeys(component) {
-  return Object.keys(getProps(component)).filter(function (prop) {
+var getPropsKeys = function getPropsKeys(component, excludePropsWithDefaultValue) {
+  return Object.keys(getProps(component, excludePropsWithDefaultValue)).filter(function (prop) {
     return prop !== 'children';
   });
 };
@@ -64,20 +89,20 @@ var appendStringifiedProp = function appendStringifiedProp(component) {
   };
 };
 
-var stringifyProps = function stringifyProps(component) {
-  return getPropsKeys(component).reduce(appendStringifiedProp(component), '');
+var stringifyProps = function stringifyProps(component, stripDefaultValueProps) {
+  return getPropsKeys(component, stripDefaultValueProps).reduce(appendStringifiedProp(component), '');
 };
 
-var stringifyComposedComponent = function stringifyComposedComponent(component) {
-  return '<' + getComponentType(component) + stringifyProps(component) + '>' + stringifyItems(getChildren(component)) + '</' + getComponentType(component) + '>';
+var stringifyComposedComponent = function stringifyComposedComponent(component, stripDefaultValueProps) {
+  return '<' + getComponentType(component) + stringifyProps(component, stripDefaultValueProps) + '>' + stringifyItems(getChildren(component), stripDefaultValueProps) + '</' + getComponentType(component) + '>';
 };
 
-var stringifySimpleComponent = function stringifySimpleComponent(component) {
-  return '<' + getComponentType(component) + stringifyProps(component) + ' />';
+var stringifySimpleComponent = function stringifySimpleComponent(component, stripDefaultValueProps) {
+  return '<' + getComponentType(component) + stringifyProps(component, stripDefaultValueProps) + ' />';
 };
 
-var stringifyComponent = function stringifyComponent(component) {
-  return getChildren(component) ? stringifyComposedComponent(component) : stringifySimpleComponent(component);
+var stringifyComponent = function stringifyComponent(component, stripDefaultValueProps) {
+  return getChildren(component) ? stringifyComposedComponent(component, stripDefaultValueProps) : stringifySimpleComponent(component, stripDefaultValueProps);
 };
 
 var stringifyFunction = function stringifyFunction(value) {
@@ -97,18 +122,21 @@ var stringifyValue = function stringifyValue(value) {
   }
 };
 
-var stringifyItem = function stringifyItem(item) {
-  return (0, _reactAddonsTestUtils.isElement)(item) ? stringifyComponent(item) : stringifyValue(item);
+var stringifyItem = function stringifyItem(item, stripDefaultValueProps) {
+  return (0, _reactAddonsTestUtils.isElement)(item) ? stringifyComponent(item, stripDefaultValueProps) : stringifyValue(item);
 };
 
-var stringifyItems = function stringifyItems(components) {
-  return [].concat(components).map(stringifyItem).join('');
+var stringifyItems = function stringifyItems(components, stripDefaultValueProps) {
+  return [].concat(components).map(function (item) {
+    return stringifyItem(item, stripDefaultValueProps);
+  }).join('');
 };
 
 var decompile = stringifyItems;
 
 exports.decompile = decompile;
 var formatted = function formatted(items) {
-  return (0, _jsBeautify.html)(stringifyItems(items), { indent_size: 2 });
+  var stripDefaultValueProps = arguments.length <= 1 || arguments[1] === undefined ? false : arguments[1];
+  return (0, _jsBeautify.html)(stringifyItems(items, stripDefaultValueProps), { indent_size: 2 });
 };
 exports.formatted = formatted;
