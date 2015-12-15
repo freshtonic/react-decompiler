@@ -4,7 +4,7 @@ import stringifyObject from './stringify-object';
 import merge from 'object-assign';
 
 const isDefaultValue = (component, prop) =>
-  component.props[prop] === component.type.defaultProps[prop];
+  component.type.defaultProps && component.props[prop] === component.type.defaultProps[prop];
 
 const relevantProps = (component, stripDefaultValueProps) => {
   if (!stripDefaultValueProps) {

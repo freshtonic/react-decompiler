@@ -21,7 +21,7 @@ var _objectAssign = require('object-assign');
 var _objectAssign2 = _interopRequireDefault(_objectAssign);
 
 var isDefaultValue = function isDefaultValue(component, prop) {
-  return component.props[prop] === component.type.defaultProps[prop];
+  return component.type.defaultProps && component.props[prop] === component.type.defaultProps[prop];
 };
 
 var relevantProps = function relevantProps(component, stripDefaultValueProps) {
