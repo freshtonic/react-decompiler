@@ -109,21 +109,25 @@ var stringifyFunction = function stringifyFunction(value) {
   return value.toString().replace(/ {[\s\S]*/, '{ ... }');
 };
 
-var stringifyValue = function stringifyValue(value) {
-  switch (typeof value) {
-    case 'function':
-      return stringifyFunction(value);
-    case 'object':
-      return (0, _stringifyObject2['default'])(value, { indent: ' ' }).replace(/\n|  /g, '');
-    case 'undefined':
-      return 'undefined';
-    default:
-      return value.toString();
+var stringifyValue = function stringifyValue(value, stripDefaultValueProps) {
+  if ((0, _reactAddonsTestUtils.isElement)(value)) {
+    return stringifyComponent(value, stripDefaultValueProps);
+  } else {
+    switch (typeof value) {
+      case 'function':
+        return stringifyFunction(value);
+      case 'object':
+        return (0, _stringifyObject2['default'])(value, { indent: ' ' }).replace(/\n|  /g, '');
+      case 'undefined':
+        return 'undefined';
+      default:
+        return value.toString();
+    }
   }
 };
 
 var stringifyItem = function stringifyItem(item, stripDefaultValueProps) {
-  return (0, _reactAddonsTestUtils.isElement)(item) ? stringifyComponent(item, stripDefaultValueProps) : stringifyValue(item);
+  return (0, _reactAddonsTestUtils.isElement)(item) ? stringifyComponent(item, stripDefaultValueProps) : stringifyValue(item, stripDefaultValueProps);
 };
 
 var stringifyItems = function stringifyItems(components, stripDefaultValueProps) {

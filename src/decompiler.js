@@ -68,17 +68,21 @@ const stringifyComponent = (component, stripDefaultValueProps) =>
 const stringifyFunction = value =>
   value.toString().replace(/ {[\s\S]*/, '{ ... }')
 
-const stringifyValue = value => {
-  switch (typeof value) {
-    case 'function': return stringifyFunction(value);
-    case 'object': return stringifyObject(value, {indent: ' '}).replace(/\n|  /g, '');
-    case 'undefined': return 'undefined';
-    default: return value.toString();
+const stringifyValue = (value, stripDefaultValueProps) => {
+  if (isReact(value)) {
+    return stringifyComponent(value, stripDefaultValueProps);
+  } else {
+    switch (typeof value) {
+      case 'function': return stringifyFunction(value);
+      case 'object': return stringifyObject(value, {indent: ' '}).replace(/\n|  /g, '');
+      case 'undefined': return 'undefined';
+      default: return value.toString();
+    }
   }
 }
 
 const stringifyItem = (item, stripDefaultValueProps) =>
-  isReact(item) ? stringifyComponent(item, stripDefaultValueProps) : stringifyValue(item);
+  isReact(item) ? stringifyComponent(item, stripDefaultValueProps) : stringifyValue(item, stripDefaultValueProps);
 
 const stringifyItems = (components, stripDefaultValueProps) =>
   [].concat(components).map(item => stringifyItem(item, stripDefaultValueProps)).join('');
