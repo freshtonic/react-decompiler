@@ -18,6 +18,35 @@ describe('decompiler', () => {
     }
   };
 
+  const Bar = React.createClass({
+    propTypes: {
+      baz: React.PropTypes.number
+    },
+
+    getDefaultProps() {
+      return { baz: 456 };
+    },
+
+    render() {
+      return <span>Bar</span>;
+    }
+  });
+
+  const Baz = React.createClass({
+    propTypes: {
+      name: React.PropTypes.string,
+      greeting: React.PropTypes.string 
+    },
+
+    getDefaultProps() {
+      return { baz: 456, greeting: "hello" };
+    },
+
+    render() {
+      return <span>{this.props.name}</span>;
+    }
+  });
+
   it('stringify a simple component', () => {
     let component = <div />;
 
@@ -28,6 +57,14 @@ describe('decompiler', () => {
     let component = <div foo="bar" className="baz" />;
 
     expect(decompile(component)).toBe('<div foo="bar" className="baz" />');
+  });
+
+  it('stringify should strip out props that have default values', () => {
+    const opts = {skipPropsWithNonDefaultValues: true};
+    expect(decompile(<Bar/>, opts)).toBe('<Bar />');
+    expect(decompile(<Bar baz={456}/>, opts)).toBe('<Bar />');
+    expect(decompile(<Bar baz={123}/>, opts)).toBe('<Bar baz={123} />');
+    expect(decompile(<Bar baz={123} foo={<Baz name="Bob" greeting="hello" />} />, opts)).toBe('<Bar baz={123} foo={<Baz name="Bob" />} />');
   });
 
   it('stringify a simple component with interpolated props', () => {

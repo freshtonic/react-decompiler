@@ -3,71 +3,120 @@ import {html as htmlBeautify} from 'js-beautify';
 import stringifyObject from './stringify-object';
 import merge from 'object-assign';
 
-const getProps = component =>
-  merge(
-    merge(
-      getAttribute('key', component),
-      getAttribute('ref', component)
-    ),
-    component.props
-  );
+  
+class Decompiler {
+  constructor(options) {
+    this.skipPropsWithNonDefaultValues =
+      !!options.skipPropsWithNonDefaultValues;
+  }
 
-const getAttribute = (attribute, component) =>
-  component[attribute] ? {[attribute]: component[attribute]} : {};
+  filteredProps(component) {
+    if (!this.skipPropsWithNonDefaultValues) {
+      return component.props;
+    } else {
+      let props = {};
+      Object.keys(component.props).
+        filter(key => !this.isDefaultValue(component, key)).
+          forEach(key => { props[key] = component.props[key]; });
+      return props;
+    }
+  }
 
-const getChildren = component => getProps(component).children;
+  isDefaultValue(component, prop) {
+    return component.type.defaultProps &&
+      component.props[prop] === component.type.defaultProps[prop];
+  }
 
-const getPropsKeys = component =>
-  Object.keys(getProps(component)).filter(prop => prop !== 'children');
+  getProps(component) {
+    return merge(
+      merge(
+        this.getAttribute('key', component),
+        this.getAttribute('ref', component)
+      ),
+      this.filteredProps(component)
+    )
+  }
 
-const getComponentName = component =>
-  component.type.displayName || component.type.name;
+  getAttribute(attribute, component) {
+    return component[attribute] ? {[attribute]: component[attribute]} : {};
+  }
 
-const getComponentType = component =>
-  getComponentName(component) || component.type;
+  getChildren(component) {
+    return this.getProps(component).children;
+  }
 
-const getPropValue = (component, prop) =>
-  getProps(component)[prop];
+  getPropsKeys(component) {
+    return Object.keys(this.getProps(component)).filter(prop => prop !== 'children');
+  }
 
-const getFormatedPropValue = (propValue) =>
-  typeof propValue === 'string' ? `"${stringifyItem(propValue)}"` : `{${stringifyItem(propValue)}}`;
+  getComponentName(component) {
+    return component.type.displayName || component.type.name;
+  }
 
-const getComponentProp = (component, prop) =>
-  getFormatedPropValue(getPropValue(component, prop));
+  getComponentType(component) {
+    return this.getComponentName(component) || component.type;
+  }
 
-const appendStringifiedProp = component => (accumulated, prop) =>
-  `${accumulated} ${prop}=${getComponentProp(component, prop)}`;
+  getPropValue(component, prop) {
+    return this.getProps(component)[prop];
+  }
 
-const stringifyProps = component =>
-  getPropsKeys(component).reduce(appendStringifiedProp(component), '');
+  getFormatedPropValue(propValue) {
+    return typeof propValue === 'string' ? `"${this.stringifyItem(propValue)}"` : `{${this.stringifyItem(propValue)}}`;
+  }
 
-const stringifyComposedComponent = component =>
-  `<${getComponentType(component)}${stringifyProps(component)}>${stringifyItems(getChildren(component))}</${getComponentType(component)}>`;
+  getComponentProp(component, prop) {
+    return this.getFormatedPropValue(this.getPropValue(component, prop));
+  }
 
-const stringifySimpleComponent = component =>
-  `<${getComponentType(component)}${stringifyProps(component)} />`;
+  appendStringifiedProp(component) {
+    return (accumulated, prop) =>
+      `${accumulated} ${prop}=${this.getComponentProp(component, prop)}`;
+  }
 
-const stringifyComponent = component =>
-  getChildren(component) ? stringifyComposedComponent(component) : stringifySimpleComponent(component);
+  stringifyProps(component) {
+    return this.getPropsKeys(component).reduce(this.appendStringifiedProp(component), '');
+  }
 
-const stringifyFunction = value =>
-  value.toString().replace(/ {[\s\S]*/, '{ ... }')
+  stringifyComposedComponent(component) {
+    return `<${this.getComponentType(component)}${this.stringifyProps(component)}>${this.stringifyItems(this.getChildren(component))}</${this.getComponentType(component)}>`;
+  }
 
-const stringifyValue = value => {
-  switch (typeof value) {
-    case 'function': return stringifyFunction(value);
-    case 'object': return stringifyObject(value, {indent: ' '}).replace(/\n|  /g, '');
-    case 'undefined': return 'undefined';
-    default: return value.toString();
+  stringifySimpleComponent(component) {
+    return `<${this.getComponentType(component)}${this.stringifyProps(component)} />`;
+  }
+
+  stringifyComponent(component) {
+    return this.getChildren(component) ? this.stringifyComposedComponent(component) : this.stringifySimpleComponent(component);
+  }
+
+  stringifyFunction(value) {
+    return value.toString().replace(/ {[\s\S]*/, '{ ... }');
+  }
+
+  stringifyValue(value) {
+    switch (typeof value) {
+      case 'function': return this.stringifyFunction(value);
+      case 'object': return stringifyObject(value, {indent: ' '}).replace(/\n|  /g, '');
+      case 'undefined': return 'undefined';
+      default: return value.toString();
+    }
+  }
+
+  stringifyItem(item) {
+    return isReact(item) ? this.stringifyComponent(item) : this.stringifyValue(item);
+  }
+
+  stringifyItems(components) {
+    return [].concat(components).map((item) => this.stringifyItem(item)).join('');
   }
 }
 
-const stringifyItem = item =>
-  isReact(item) ? stringifyComponent(item) : stringifyValue(item);
+export const decompile = function(components, options={}) {
+  return (new Decompiler(options)).stringifyItems(components);
+};
 
-const stringifyItems = components =>
-  [].concat(components).map(stringifyItem).join('');
+export const formatted = function(components, options={}) {
+  return htmlBeautify((new Decompiler(options)).stringifyItems(components), { indent_size: 2 });
+};
 
-export const decompile = stringifyItems;
-
-export const formatted = (items) => htmlBeautify(stringifyItems(items), { indent_size: 2 });
